@@ -142,7 +142,112 @@ class KnowledgeBase(object):
         """
         ####################################################
         # Student code goes here
+        in_kb = False
+        indent_count = 0
+        if isinstance(fact_or_rule, Fact):
+            for facts in self.facts:
+                if facts == fact_or_rule:
+                    in_kb = True
+                    s = self.get_state_string(facts)
+                    if facts.asserted == True:
+                        s += ' ASSERTED\n'
+                    else:
+                        s += '\n'
+                        for supps in facts.supported_by:
+                            for supp in supps:
+                                s += self.explain_helper(supp, indent_count, True)
+                    return s
+            if in_kb == False:
+                err = "Fact is not in the KB"
+                return err
+        elif isinstance(fact_or_rule, Rule):
+            for rules in self.rules:
+                if rules == fact_or_rule:
+                    in_kb = True
+                    s = self.get_state_string(rules)
+                    if rules.asserted == True:
+                        s += ' ASSERTED\n'
+                    else:
+                        s += '\n'
+                        for supps in rules.supported_by:
+                            for supp in supps:
 
+                                s += self.explain_helper(supp,indent_count,True)
+                    return s
+            if in_kb == False:
+                err = "Rule is not in the KB"
+                return err
+
+    def explain_helper(self, fact_or_rule, indent_count, first):
+        if fact_or_rule.asserted == True and first == True:
+            s = '  SUPPORTED BY\n'
+        else:
+            s = ''
+        indent_count += 2
+        if isinstance(fact_or_rule, Fact):
+            for facts in self.facts:
+                if facts == fact_or_rule:
+                    #s = (' ' * indent_count) + '  SUPPORTED BY\n'
+                    #indent_count += 1
+                    s += ('  ' * indent_count) + self.get_state_string(facts)
+                    if facts.asserted == True:
+                        s += ' ASSERTED\n'
+                    else:
+                        s += '\n' + ('  ' * indent_count) + '  SUPPORTED BY\n'
+                        for supps in facts.supported_by:
+                            for supp in supps:
+                                '''s += (' ' * indent_count) + ' ' + self.get_state_string(supp) + '\n'
+                                if supp.supported_by != []:
+                                    #indent_count = indent_count + 1
+                                    for sp in supp.supported_by:
+                                        for ps in sp:
+                                            s += self.explain_helper(ps, indent_count)'''
+                                s += self.explain_helper(supp,indent_count,False)
+                    return s
+        elif isinstance(fact_or_rule, Rule):
+            for rules in self.rules:
+                if rules == fact_or_rule:
+
+                    s += ('  ' * indent_count) + self.get_state_string(rules)
+                    if rules.asserted == True:
+                        s += ' ASSERTED\n'
+                    else:
+                        s += '\n' + ('  ' * indent_count) + '  SUPPORTED BY\n'
+                        for supps in rules.supported_by:
+                            for supp in supps:
+                                s += self.explain_helper(supp,indent_count,False)
+                    return s
+    def get_state_string(self, fr):
+        if isinstance(fr, Fact):
+            s = 'fact: (' + fr.statement.predicate + ' ' + fr.statement.terms[0].term.element + ' ' + fr.statement.terms[1].term.element + ')'
+            return s
+        elif isinstance(fr, Rule):
+            s = 'rule: (('
+            if len(fr.lhs) > 1:
+                fcount = 0
+                for stats in fr.lhs:
+                    if fcount == 0:
+                        s += stats.predicate
+                        for terms in stats.terms:
+                            s += ' ' + terms.term.element
+                        s += ')'
+                        fcount = fcount + 1
+                    else:
+                        s += ', (' + stats.predicate
+                        for terms in stats.terms:
+                            s += ' ' + terms.term.element
+                        s += ')'
+            else:
+                s += fr.lhs[0].predicate
+                for terms in fr.lhs[0].terms:
+                    s += ' ' + terms.term.element
+                s += ')'
+            #s += ') -> (' + fr.rhs.predicate + ' ' + fr.rhs.terms[0].term.element + ' ' + fr.rhs.terms[1].term.element + ')'
+            s += ') -> (' + fr.rhs.predicate
+            for stats in fr.rhs.terms:
+                s += ' ' + stats.term.element
+            s += ')'
+            return s
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
@@ -154,7 +259,7 @@ class InferenceEngine(object):
             kb (KnowledgeBase) - A KnowledgeBase
 
         Returns:
-            Nothing            
+            Nothing
         """
         printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
             [fact.statement, rule.lhs, rule.rhs])
